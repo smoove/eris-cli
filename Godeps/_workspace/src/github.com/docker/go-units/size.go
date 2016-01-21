@@ -31,7 +31,11 @@ type unitMap map[string]int64
 var (
 	decimalMap = unitMap{"k": KB, "m": MB, "g": GB, "t": TB, "p": PB}
 	binaryMap  = unitMap{"k": KiB, "m": MiB, "g": GiB, "t": TiB, "p": PiB}
+<<<<<<< 20fd4e7360d9ddfda2cd8484078392cf63bdc660
 	sizeRegex  = regexp.MustCompile(`^(\d+(\.\d+)*) ?([kKmMgGtTpP])?[bB]?$`)
+=======
+	sizeRegex  = regexp.MustCompile(`^(\d+)([kKmMgGtTpP])?[bB]?$`)
+>>>>>>> remotes; try 1
 )
 
 var decimapAbbrs = []string{"B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"}
@@ -77,19 +81,36 @@ func RAMInBytes(size string) (int64, error) {
 // Parses the human-readable size string into the amount it represents.
 func parseSize(sizeStr string, uMap unitMap) (int64, error) {
 	matches := sizeRegex.FindStringSubmatch(sizeStr)
+<<<<<<< 20fd4e7360d9ddfda2cd8484078392cf63bdc660
 	if len(matches) != 4 {
 		return -1, fmt.Errorf("invalid size: '%s'", sizeStr)
 	}
 
 	size, err := strconv.ParseFloat(matches[1], 64)
+=======
+	if len(matches) != 3 {
+		return -1, fmt.Errorf("invalid size: '%s'", sizeStr)
+	}
+
+	size, err := strconv.ParseInt(matches[1], 10, 0)
+>>>>>>> remotes; try 1
 	if err != nil {
 		return -1, err
 	}
 
+<<<<<<< 20fd4e7360d9ddfda2cd8484078392cf63bdc660
 	unitPrefix := strings.ToLower(matches[3])
 	if mul, ok := uMap[unitPrefix]; ok {
 		size *= float64(mul)
 	}
 
 	return int64(size), nil
+=======
+	unitPrefix := strings.ToLower(matches[2])
+	if mul, ok := uMap[unitPrefix]; ok {
+		size *= mul
+	}
+
+	return size, nil
+>>>>>>> remotes; try 1
 }
