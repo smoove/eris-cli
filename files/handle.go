@@ -10,10 +10,14 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/eris-ltd/eris-cli/config"
+	"github.com/eris-ltd/eris-cli/data"
 	"github.com/eris-ltd/eris-cli/definitions"
 	"github.com/eris-ltd/eris-cli/services"
+	"github.com/eris-ltd/eris-cli/util"
 
 	log "github.com/eris-ltd/eris-cli/Godeps/_workspace/src/github.com/Sirupsen/logrus"
+	. "github.com/eris-ltd/eris-cli/Godeps/_workspace/src/github.com/eris-ltd/common/go/common"
 	"github.com/eris-ltd/eris-cli/Godeps/_workspace/src/github.com/eris-ltd/common/go/ipfs"
 )
 
@@ -38,6 +42,60 @@ func GetFiles(do *definitions.Do) error {
 		return err
 	}
 	do.Result = "success"
+	return nil
+}
+
+func PutFilesDir(do *definitions.Do) error {
+	ensureRunning()
+
+	log.WithFields(log.Fields{
+		"dir": do.Name,
+		//"gateway": do.Gateway,
+	}).Debug("Adding contents of a directory")
+
+	do.Source = do.Name //path to dir
+	do.Destination = filepath.Join(ErisContainerRoot, "scratch", "data", do.Source)
+	do.Name = "ipfs"
+	do.Operations.Interactive = false
+	do.Operations.PublishAllPorts = true
+	do.Operations.Args = []string{"mkdir", "-p", do.Destination}
+
+	if err := services.ExecService(do); err != nil {
+		return err
+	}
+
+	do.Operations.Args = nil
+	do.Operations.PublishAllPorts = false
+	if err := data.ImportData(do); err != nil {
+		return err
+	}
+
+	ip := new(bytes.Buffer)
+	config.GlobalConfig.Writer = ip
+
+	do.Operations.Interactive = false
+	do.Operations.PublishAllPorts = true
+	do.Operations.Args = []string{"NetworkSettings.IPAddress"}
+
+	if err := services.InspectService(do); err != nil {
+		return err
+	}
+	api := fmt.Sprintf("/ip4/%s/tcp/5001", util.TrimString(ip.String()))
+	//api := "/ip4/0.0.0.0/tcp/5001"
+	do.Operations.Interactive = false
+	do.Operations.PublishAllPorts = true
+
+	do.Operations.Args = []string{"ipfs", "add", "-r", do.Destination, "--api", api}
+	//TODO caputre & parse output
+	out := new(bytes.Buffer)
+	config.GlobalConfig.Writer = out
+
+	if err := services.ExecService(do); err != nil {
+		return err
+	}
+	log.Warn("Directory object added succesfully")
+	log.Warn(out.String())
+
 	return nil
 }
 

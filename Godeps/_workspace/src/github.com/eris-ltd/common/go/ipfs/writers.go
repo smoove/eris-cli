@@ -22,6 +22,17 @@ func SendToIPFS(fileName, gateway string, w io.Writer) (string, error) {
 	return hash[0], nil
 }
 
+func AddDirToIPFS(dir string, w io.Writer) (string, error) {
+	url := IPFSBaseAPIUrl() + "add?arg=" + dir + "&recursive"
+
+	w.Write([]byte("Adding directory to IPFS. Dir =>\t" + dir + "\n"))
+	body, err := PostAPICall(url, "", w)
+	if err != nil {
+		return "", err
+	}
+
+}
+
 func PinToIPFS(fileHash string, w io.Writer) (string, error) {
 	url := IPFSBaseAPIUrl() + "pin/add?arg=" + fileHash
 

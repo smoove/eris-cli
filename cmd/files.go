@@ -33,6 +33,7 @@ or two to boot and then retry the eris files command which failed.`,
 func buildFilesCommand() {
 	Files.AddCommand(filesImport)
 	Files.AddCommand(filesExport)
+	Files.AddCommand(filesExportDir)
 	Files.AddCommand(filesCache)
 	Files.AddCommand(filesCat)
 	Files.AddCommand(filesList)
@@ -56,6 +57,15 @@ var filesExport = &cobra.Command{
 
 Optionally post all contents of a directory with: put --dir=DIRNAME`,
 	Run: FilesPut,
+}
+
+var filesExportDir = &cobra.Command{
+	Use:   "put-dir DIR",
+	Short: "Post dirs to IPFS.",
+	Long:  `Post dirs to IPFS.`,
+
+	//Optionally post all contents of a directory with: put --dir=DIRNAME`,
+	Run: FilesPutDir,
 }
 
 var filesCache = &cobra.Command{
@@ -126,6 +136,15 @@ func FilesPut(cmd *cobra.Command, args []string) {
 
 	do.Name = args[0]
 	err := files.PutFiles(do)
+	IfExit(err)
+	log.Warn(do.Result)
+}
+
+func FilesPutDir(cmd *cobra.Command, args []string) {
+	IfExit(ArgCheck(1, "eq", cmd, args))
+
+	do.Name = args[0]
+	err := files.PutFilesDir(do)
 	IfExit(err)
 	log.Warn(do.Result)
 }
