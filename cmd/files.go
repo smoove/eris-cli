@@ -33,7 +33,6 @@ or two to boot and then retry the eris files command which failed.`,
 func buildFilesCommand() {
 	Files.AddCommand(filesImport)
 	Files.AddCommand(filesExport)
-	Files.AddCommand(filesExportDir)
 	Files.AddCommand(filesCache)
 	Files.AddCommand(filesCat)
 	Files.AddCommand(filesList)
@@ -42,30 +41,18 @@ func buildFilesCommand() {
 }
 
 var filesImport = &cobra.Command{
-	Use:   "get HASH [FILE]",
-	Short: "Pull files from IPFS via a hash and save them locally.",
-	Long: `Pull files from IPFS via a hash and save them locally.
-
-Optionally pass in a CSV with: get --csv=FILE`,
-	Run: FilesGet,
+	Use:   "get HASH FILE/DIR",
+	Short: "Pull files/objects from IPFS via a hash and save them locally.",
+	Long:  `Pull files/objects from IPFS via a hash and save them locally.`,
+	Run:   FilesGet,
 }
 
 var filesExport = &cobra.Command{
-	Use:   "put FILE",
-	Short: "Post files to IPFS.",
-	Long: `Post files to IPFS.
-
-Optionally post all contents of a directory with: put --dir=DIRNAME`,
+	Use:   "put FILE/DIR",
+	Short: "Post files or whole directories to IPFS.",
+	Long: `Post files or whole directories to IPFS.
+Directories will be added as objects in the MerkleDAG.`,
 	Run: FilesPut,
-}
-
-var filesExportDir = &cobra.Command{
-	Use:   "put-dir DIR",
-	Short: "Post dirs to IPFS.",
-	Long:  `Post dirs to IPFS.`,
-
-	//Optionally post all contents of a directory with: put --dir=DIRNAME`,
-	Run: FilesPutDir,
 }
 
 var filesCache = &cobra.Command{
@@ -74,7 +61,6 @@ var filesCache = &cobra.Command{
 	Long: `Cache files to IPFS' local daemon.
 
 It caches files locally via IPFS pin, by hash.
-Optionally pass in a CSV with: cache --csv=[FILE].
 
 NOTE: "put" will "cache" recursively by default.`,
 	Run: FilesPin,
@@ -106,28 +92,16 @@ var filesCached = &cobra.Command{
 // cli flags
 func addFilesFlags() {
 
-	buildFlag(filesImport, do, "csv", "files")
-	filesImport.Flags().StringVarP(&do.NewName, "dirname", "", "", "name of new directory to dump IPFS files from --csv")
 	filesExport.Flags().StringVarP(&do.Gateway, "gateway", "", "", "specify a hosted gateway. default is IPFS' gateway; type \"eris\" for our gateway, or use your own with \"http://yourhost\"")
-	//TODO `put files --dir -r` once pr to ipfs is merged
-	filesExport.Flags().BoolVarP(&do.AddDir, "dir", "", false, "add all files from a directory (note: this will not create an ipfs object). returns a log file (ipfs_hashes.csv) to pass into `eris files get`")
-
-	//command will ignore fileName but that's ok
-	buildFlag(filesCache, do, "csv", "files")
 
 	filesCached.Flags().BoolVarP(&do.Rm, "rma", "", false, "remove all cached files")
 	filesCached.Flags().StringVarP(&do.Hash, "rm", "", "", "remove a cached file by hash")
 }
 
 func FilesGet(cmd *cobra.Command, args []string) {
-	if do.CSV == "" {
-		IfExit(ArgCheck(2, "eq", cmd, args))
-		do.Name = args[0]
-		do.Path = args[1]
-	} else {
-		do.Name = ""
-		do.Path = ""
-	}
+	IfExit(ArgCheck(2, "eq", cmd, args))
+	do.Name = args[0]
+	do.Path = args[1]
 	IfExit(files.GetFiles(do))
 }
 
@@ -135,8 +109,7 @@ func FilesPut(cmd *cobra.Command, args []string) {
 	IfExit(ArgCheck(1, "eq", cmd, args))
 
 	do.Name = args[0]
-	err := files.PutFiles(do)
-	IfExit(err)
+	IfExit(files.PutFiles(do))
 	log.Warn(do.Result)
 }
 
@@ -144,51 +117,33 @@ func FilesPutDir(cmd *cobra.Command, args []string) {
 	IfExit(ArgCheck(1, "eq", cmd, args))
 
 	do.Name = args[0]
-	err := files.PutFilesDir(do)
-	IfExit(err)
-	log.Warn(do.Result)
+	IfExit(files.PutFilesDir(do))
+	//log.Warn(do.Result)
 }
 
 func FilesPin(cmd *cobra.Command, args []string) {
-	if do.CSV == "" {
-		if len(args) != 1 {
-			cmd.Help()
-			return
-		}
-		do.Name = args[0]
-	} else {
-		do.Name = ""
-	}
-	err := files.PinFiles(do)
-	IfExit(err)
+	IfExit(ArgCheck(1, "eq", cmd, args))
+	do.Name = args[0]
+	IfExit(files.PinFiles(do))
 	log.Warn(do.Result)
 }
 
 func FilesCat(cmd *cobra.Command, args []string) {
-	if len(args) != 1 {
-		cmd.Help()
-		return
-	}
+	IfExit(ArgCheck(1, "eq", cmd, args))
 	do.Name = args[0]
-	err := files.CatFiles(do)
-	IfExit(err)
+	IfExit(files.CatFiles(do))
 	log.Warn(do.Result)
 
 }
 
 func FilesList(cmd *cobra.Command, args []string) {
-	if len(args) != 1 {
-		cmd.Help()
-		return
-	}
+	IfExit(ArgCheck(1, "eq", cmd, args))
 	do.Name = args[0]
-	err := files.ListFiles(do)
-	IfExit(err)
+	IfExit(files.ListFiles(do))
 	log.Warn(do.Result)
 }
 
 func FilesManageCached(cmd *cobra.Command, args []string) {
-	err := files.ManagePinned(do)
-	IfExit(err)
+	IfExit(files.ManagePinned(do))
 	log.Warn(do.Result)
 }
