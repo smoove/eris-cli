@@ -29,12 +29,17 @@ import (
 //  do.Destination                - directory to _unload_ the payload into (required)
 //
 func ImportData(do *definitions.Do) error {
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	do.Source = AbsolutePath(wd, do.Source)
+
 	log.WithFields(log.Fields{
 		"from": do.Source,
 		"to":   do.Destination,
 	}).Debug("Importing")
 	if util.IsDataContainer(do.Name) {
-
 		srv := PretendToBeAService(do.Name)
 		service, exists := perform.ContainerExists(srv.Operations)
 
