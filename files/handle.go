@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	//	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -127,23 +128,12 @@ func importDirectory(do *definitions.Do) error {
 	hash := do.Name
 
 	// path to dir on host
-	do.Destination = do.Path
 	// path to source in cont (doesn't exist, need to make it)
 	// exec'ing ipfs get will save files in Root hash named dir
-	do.Source = filepath.Join(ErisContainerRoot, "scratch", "data", do.Path)
-	do.Name = "ipfs"
-
-	do.Operations.Interactive = false
-	do.Operations.PublishAllPorts = true
-	do.Operations.Args = []string{"mkdir", "-p", do.Source}
-
-	if err := services.ExecService(do); err != nil {
-		return err
-	}
 
 	ip := new(bytes.Buffer)
 	config.GlobalConfig.Writer = ip
-
+	do.Name = "ipfs"
 	do.Operations.Interactive = false
 	do.Operations.PublishAllPorts = true
 	do.Operations.Args = []string{"NetworkSettings.IPAddress"}
@@ -166,16 +156,24 @@ func importDirectory(do *definitions.Do) error {
 	}
 	log.Warn(out.String())
 
-	do.Operations.Args = []string{"mv", filepath.Join(ErisContainerRoot, hash), do.Source}
-
-	if err := services.ExecService(do); err != nil {
-		return err
-	}
-
 	//get src/dest right
+	//on host
+	do.Destination = do.Path
+	do.Source = filepath.Join(ErisContainerRoot, hash)
 	do.Operations.Args = nil
 	do.Operations.PublishAllPorts = false
 	if err := data.ExportData(do); err != nil {
+		return err
+	}
+
+	_, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	theDir := filepath.Join(do.Destination, hash)
+	newDir := do.Destination
+
+	if err := data.MoveOutOfDirAndRmDir(theDir, newDir); err != nil {
 		return err
 	}
 
