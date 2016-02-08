@@ -19,32 +19,64 @@ import (
 	"github.com/eris-ltd/eris-cli/Godeps/_workspace/src/github.com/eris-ltd/common/go/ipfs"
 )
 
-//TODO get rid of CSV altogether (and --dir)
-// we are going full legit
 func GetFiles(do *definitions.Do) error {
 	ensureRunning()
-	log.WithFields(log.Fields{
-		"file": do.Name,
-		"path": do.Path,
-	}).Debug("Importing a file")
-	if err := importFile(do.Name, do.Path); err != nil {
-		return err
+
+	dirBool := checkPath(do.Path)
+
+	if dirBool {
+		if err := importDirectory(do); err != nil {
+			return err
+		}
+		//get like you put dir
+	} else {
+		if err := importFile(do.Name, do.Path); err != nil {
+			return err
+		}
 	}
 	do.Result = "success"
 	return nil
 }
 
-func PutFilesDir(do *definitions.Do) error {
+func PutFiles(do *definitions.Do) error {
 	ensureRunning()
 
-	log.WithFields(log.Fields{
-		"dir": do.Name,
-		//"gateway": do.Gateway,
-	}).Debug("Adding contents of a directory")
+	if err := checkGatewayFlag(do); err != nil {
+		return err
+	}
 
-	do.Source = do.Name //path to dir
+	//check if do.Name is dir or file ...
+	f, err := os.Stat(do.Name)
+	if err != nil {
+		return err
+	}
+
+	if f.IsDir() {
+		//can't use gateway - check & throw err
+		if err := exportDirectory(do); err != nil {
+			return err
+		}
+
+	} else {
+		hash, err := exportFile(do.Name, do.Gateway)
+		if err != nil {
+			return err
+		}
+		do.Result = hash
+	}
+	return nil
+}
+
+func exportDirectory(do *definitions.Do) error {
+	log.WithField("dir", do.Name).Warn("Adding contents of a directory")
+
+	// path to dir on host
+	do.Source = do.Name
+	// path to dest in cont (doesn't exist, need to make it)
+	// will be removed later
 	do.Destination = filepath.Join(ErisContainerRoot, "scratch", "data", do.Source)
 	do.Name = "ipfs"
+
 	do.Operations.Interactive = false
 	do.Operations.PublishAllPorts = true
 	do.Operations.Args = []string{"mkdir", "-p", do.Destination}
@@ -70,12 +102,11 @@ func PutFilesDir(do *definitions.Do) error {
 		return err
 	}
 	api := fmt.Sprintf("/ip4/%s/tcp/5001", util.TrimString(ip.String()))
-	//api := "/ip4/0.0.0.0/tcp/5001"
+
 	do.Operations.Interactive = false
 	do.Operations.PublishAllPorts = true
-
 	do.Operations.Args = []string{"ipfs", "add", "-r", do.Destination, "--api", api}
-	//TODO caputre & parse output
+
 	out := new(bytes.Buffer)
 	config.GlobalConfig.Writer = out
 
@@ -88,31 +119,71 @@ func PutFilesDir(do *definitions.Do) error {
 	return nil
 }
 
-func PutFiles(do *definitions.Do) error {
-	ensureRunning()
-
-	if do.Gateway != "" {
-		_, err := url.Parse(do.Gateway)
-		if err != nil {
-			return fmt.Errorf("Invalid gateway URL provided %v\n", err)
-		}
-		log.WithField("gateway", do.Gateway).Debug("Posting to")
-	} else {
-		log.Debug("Posting to gateway.ipfs.io")
-	}
-
+func importDirectory(do *definitions.Do) error {
 	log.WithFields(log.Fields{
-		"file":    do.Name,
-		"gateway": do.Gateway,
-	}).Debug("Adding a file")
-	hash, err := exportFile(do.Name, do.Gateway)
-	if err != nil {
+		"hash": do.Name,
+		"path": do.Path,
+	}).Warn("Getting a directory")
+	hash := do.Name
+
+	// path to dir on host
+	do.Destination = do.Path
+	// path to source in cont (doesn't exist, need to make it)
+	// exec'ing ipfs get will save files in Root hash named dir
+	do.Source = filepath.Join(ErisContainerRoot, "scratch", "data", do.Path)
+	do.Name = "ipfs"
+
+	do.Operations.Interactive = false
+	do.Operations.PublishAllPorts = true
+	do.Operations.Args = []string{"mkdir", "-p", do.Source}
+
+	if err := services.ExecService(do); err != nil {
 		return err
 	}
-	do.Result = hash
-	return nil
-}
 
+	ip := new(bytes.Buffer)
+	config.GlobalConfig.Writer = ip
+
+	do.Operations.Interactive = false
+	do.Operations.PublishAllPorts = true
+	do.Operations.Args = []string{"NetworkSettings.IPAddress"}
+
+	if err := services.InspectService(do); err != nil {
+		return err
+	}
+	api := fmt.Sprintf("/ip4/%s/tcp/5001", util.TrimString(ip.String()))
+
+	do.Operations.Interactive = false
+	do.Operations.PublishAllPorts = true
+	//will save to /home/eris/.eris in hash dir.
+	do.Operations.Args = []string{"ipfs", "get", hash, "--api", api}
+
+	out := new(bytes.Buffer)
+	config.GlobalConfig.Writer = out
+
+	if err := services.ExecService(do); err != nil {
+		return err
+	}
+	log.Warn(out.String())
+
+	do.Operations.Args = []string{"mv", filepath.Join(ErisContainerRoot, hash), do.Source}
+
+	if err := services.ExecService(do); err != nil {
+		return err
+	}
+
+	//get src/dest right
+	do.Operations.Args = nil
+	do.Operations.PublishAllPorts = false
+	if err := data.ExportData(do); err != nil {
+		return err
+	}
+
+	log.Warn("Directory object getted succesfully.")
+	//log.Warn(out.String())
+	return nil
+
+}
 func PinFiles(do *definitions.Do) error {
 	ensureRunning()
 	log.WithFields(log.Fields{
@@ -189,6 +260,11 @@ func ManagePinned(do *definitions.Do) error {
 func importFile(hash, fileName string) error {
 	var err error
 
+	log.WithFields(log.Fields{
+		"from hash": hash,
+		"to path":   fileName,
+	}).Debug("Importing a file")
+
 	if log.GetLevel() > 0 {
 		err = ipfs.GetFromIPFS(hash, fileName, "", os.Stdout)
 	} else {
@@ -203,6 +279,11 @@ func importFile(hash, fileName string) error {
 func exportFile(fileName, gateway string) (string, error) {
 	var hash string
 	var err error
+
+	log.WithFields(log.Fields{
+		"file":    fileName,
+		"gateway": gateway,
+	}).Debug("Adding a file")
 
 	if log.GetLevel() > 0 {
 		hash, err = ipfs.SendToIPFS(fileName, gateway, os.Stdout)
@@ -316,4 +397,30 @@ func ensureRunning() {
 		return
 	}
 	log.Info("IPFS is running")
+}
+
+func checkGatewayFlag(do *definitions.Do) error {
+	if do.Gateway != "" {
+		_, err := url.Parse(do.Gateway)
+		if err != nil {
+			return fmt.Errorf("Invalid gateway URL provided %v\n", err)
+		}
+		log.WithField("gateway", do.Gateway).Debug("Posting to")
+	} else {
+		log.Debug("Posting to gateway.ipfs.io")
+	}
+	return nil
+}
+
+func checkPath(path string) bool {
+	dirBool := false
+	thing := strings.Split(path, ".")
+	if len(thing) == 1 {
+		log.Warn("No file extension detected, assuming directory.")
+		return true
+	} else {
+		log.Warn("File extension detected, assuming file.")
+		return false
+	}
+	return dirBool
 }

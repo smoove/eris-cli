@@ -107,18 +107,9 @@ func FilesGet(cmd *cobra.Command, args []string) {
 
 func FilesPut(cmd *cobra.Command, args []string) {
 	IfExit(ArgCheck(1, "eq", cmd, args))
-
 	do.Name = args[0]
 	IfExit(files.PutFiles(do))
 	log.Warn(do.Result)
-}
-
-func FilesPutDir(cmd *cobra.Command, args []string) {
-	IfExit(ArgCheck(1, "eq", cmd, args))
-
-	do.Name = args[0]
-	IfExit(files.PutFilesDir(do))
-	//log.Warn(do.Result)
 }
 
 func FilesPin(cmd *cobra.Command, args []string) {
