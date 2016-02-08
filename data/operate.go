@@ -112,6 +112,11 @@ func ExecData(do *definitions.Do) (buf *bytes.Buffer, err error) {
 //export from: do.Source(in container), to: do.Destination(on host)
 func ExportData(do *definitions.Do) error {
 	if util.IsDataContainer(do.Name) {
+		wd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		do.Destination = AbsolutePath(wd, do.Destination)
 		log.WithField("=>", do.Name).Info("Exporting data container")
 
 		// we want to export to a temp directory.
@@ -154,7 +159,7 @@ func ExportData(do *definitions.Do) error {
 
 		// now if docker dumps to exportPath/.eris we should remove
 		// move everything from .eris to exportPath
-		if err := moveOutOfDirAndRmDir(filepath.Join(exportPath, ".eris"), exportPath); err != nil {
+		if err := MoveOutOfDirAndRmDir(filepath.Join(exportPath, ".eris"), exportPath); err != nil {
 			return err
 		}
 
@@ -165,7 +170,7 @@ func ExportData(do *definitions.Do) error {
 				return fmt.Errorf("Error:\tThe marmots could neither find, nor had access to make the directory: (%s)\n", do.Destination)
 			}
 		}
-		if err := moveOutOfDirAndRmDir(exportPath, do.Destination); err != nil {
+		if err := MoveOutOfDirAndRmDir(exportPath, do.Destination); err != nil {
 			return err
 		}
 	} else {
@@ -177,7 +182,7 @@ func ExportData(do *definitions.Do) error {
 }
 
 //TODO test that this doesn't fmt things up, see note in #400
-func moveOutOfDirAndRmDir(src, dest string) error {
+func MoveOutOfDirAndRmDir(src, dest string) error {
 	log.WithFields(log.Fields{
 		"from": src,
 		"to":   dest,
