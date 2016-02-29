@@ -48,7 +48,7 @@ func ImportData(do *definitions.Do) error {
 		containerName := util.DataContainersName(do.Name)
 		// os.Chdir(do.Source)
 
-		reader, err := util.Tar(do.Source, 0)
+		reader, err := util.TarForDocker(do.Source, 0)
 		if err != nil {
 			return err
 		}
@@ -143,7 +143,7 @@ func ExportData(do *definitions.Do) error {
 		}()
 
 		log.WithField("=>", exportPath).Debug("Untarring package from container")
-		if err = util.Untar(reader, do.Name, exportPath); err != nil {
+		if err = util.UntarForDocker(reader, do.Name, exportPath); err != nil {
 			return err
 		}
 
