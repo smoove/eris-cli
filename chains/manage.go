@@ -92,30 +92,35 @@ func MakeChain(do *definitions.Do) error {
 	doData.Source = AccountsTypePath
 	doData.Destination = path.Join(ErisContainerRoot, "chains", "account-types")
 	if err := data.ImportData(doData); err != nil {
-		return err
+		return fmt.Errorf("import data error: %v\n", err)
+		//return err
 	}
 	doData.Source = ChainTypePath
 	doData.Destination = path.Join(ErisContainerRoot, "chains", "chain-types")
 	if err := data.ImportData(doData); err != nil {
-		return err
+		return fmt.Errorf("import data error: %v\n", err)
+		//return err
 	}
 	chnPath := filepath.Join(ChainsPath, do.Name)
 	if _, err := os.Stat(chnPath); !os.IsNotExist(err) {
 		doData.Operations.Args = []string{"mkdir", "--parents", path.Join(ErisContainerRoot, "chains", do.Name)}
 		if _, err := data.ExecData(doData); err != nil {
-			return err
+			return fmt.Errorf("exec data error: %v\n", err)
+			//return err
 		}
 		doData.Operations.Args = []string{}
 		doData.Source = chnPath
 		doData.Destination = path.Join(ErisContainerRoot, "chains", do.Name)
 		if err := data.ImportData(doData); err != nil {
-			return err
+			return fmt.Errorf("import data error: %v\n", err)
+			//return err
 		}
 	}
 
 	buf, err := perform.DockerExecService(do.Service, do.Operations)
 	if err != nil {
-		return err
+		return fmt.Errorf("exec service error: %v\n", err)
+		//return err
 	}
 
 	io.Copy(config.GlobalConfig.Writer, buf)
@@ -123,7 +128,8 @@ func MakeChain(do *definitions.Do) error {
 	doData.Source = path.Join(ErisContainerRoot, "chains")
 	doData.Destination = ErisRoot
 	if err := data.ExportData(doData); err != nil {
-		return err
+		return fmt.Errorf("export data error: %v\n", err)
+		//return err
 	}
 
 	if !do.RmD {

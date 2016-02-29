@@ -10,8 +10,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/eris-ltd/eris-cli/Godeps/_workspace/src/github.com/eris-ltd/common/go/log" // so we can flush logs on exit/ifexit
-	"github.com/eris-ltd/eris-cli/Godeps/_workspace/src/github.com/mitchellh/go-homedir"
+	"github.com/eris-ltd/common/Godeps/_workspace/src/github.com/mitchellh/go-homedir"
+	"github.com/eris-ltd/common/go/log" // so we can flush logs on exit/ifexit
 )
 
 var (
@@ -25,7 +25,8 @@ var (
 
 	// Major Directories
 	ActionsPath  = filepath.Join(ErisRoot, "actions")
-	AppsPath     = filepath.Join(ErisRoot, "apps")   // previously "dapps"
+	AppsPath     = filepath.Join(ErisRoot, "apps") // previously "dapps"
+	BundlesPath  = filepath.Join(ErisRoot, "bundles")
 	ChainsPath   = filepath.Join(ErisRoot, "chains") // previously "blockchains"
 	KeysPath     = filepath.Join(ErisRoot, "keys")
 	RemotesPath  = filepath.Join(ErisRoot, "remotes")
@@ -62,6 +63,7 @@ var MajorDirs = []string{
 	ErisRoot,
 	ActionsPath,
 	AppsPath,
+	BundlesPath,
 	ChainsPath,
 	DefaultChainPath,
 	AccountsTypePath,

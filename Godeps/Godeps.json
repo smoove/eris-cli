@@ -27,7 +27,7 @@
 		},
 		{
 			"ImportPath": "github.com/eris-ltd/common/go/common",
-			"Rev": "31d06f51b52a9f2e841db234eb53997f2e4cd860"
+			"Rev": "599e2b5057345680c99510c216d8feb0c98e2724",
 		},
 		{
 			"ImportPath": "github.com/eris-ltd/common/go/ipfs",
