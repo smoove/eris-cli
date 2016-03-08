@@ -124,6 +124,8 @@ packagesToTest() {
   if [ $? -ne 0 ]; then return 1; fi
   go test ./config/... && passed Config
   if [ $? -ne 0 ]; then return 1; fi
+  go test ./agent/... && passed Agent
+  if [ $? -ne 0 ]; then return 1; fi
   go test ./perform/... && passed Perform
   if [ $? -ne 0 ]; then return 1; fi
   go test ./data/... && passed Data
@@ -143,8 +145,6 @@ packagesToTest() {
   # go test ./remotes/... && passed Remotes
   # if [ $? -ne 0 ]; then return 1; fi
   # go test ./apps/... && passed Apps
-  # if [ $? -ne 0 ]; then return 1; fi
-  # go test ./agent/... && passed Agent
   # if [ $? -ne 0 ]; then return 1; fi
   go test ./cmd/... && passed Commands
   if [ $? -ne 0 ]; then return 1; fi
