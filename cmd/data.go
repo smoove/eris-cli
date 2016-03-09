@@ -178,6 +178,7 @@ func ImportData(cmd *cobra.Command, args []string) {
 	do.Name = args[0]
 	do.Source = args[1]
 	do.Destination = args[2]
+	do.MakeDestination = false // check if exists
 	IfExit(data.ImportData(do))
 }
 

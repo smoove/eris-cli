@@ -28,11 +28,15 @@ import (
 //  do.Source                     - directory which should be imported (required)
 //  do.Destination                - directory to _unload_ the payload into (required)
 //
+// If the named data container does not exist, it will be created
+// If do.Destination does not exist, it will be created
+// do.MakeDestination is false by default and flipped to true if need by
 func ImportData(do *definitions.Do) error {
 	log.WithFields(log.Fields{
 		"from": do.Source,
 		"to":   do.Destination,
 	}).Debug("Importing")
+
 	if util.IsDataContainer(do.Name) {
 
 		srv := PretendToBeAService(do.Name)
@@ -46,7 +50,24 @@ func ImportData(do *definitions.Do) error {
 		}
 
 		containerName := util.DataContainersName(do.Name)
-		// os.Chdir(do.Source)
+
+		if do.MakeDestination {
+			if err := runData(containerName, []string{"mkdir", "-p", do.Destination}); err != nil {
+				return err
+			}
+		} else {
+			doCheck := definitions.NowDo()
+			doCheck.Name = do.Name
+			doCheck.Operations.Args = []string{"ls", do.Destination}
+			buf, err := ExecData(doCheck)
+			if err != nil {
+				return err
+			}
+			//do something with buf
+			fmt.Println(buf.String())
+			return nil
+			//find out if needed!
+		}
 
 		reader, err := util.Tar(do.Source, 0)
 		if err != nil {
@@ -65,25 +86,33 @@ func ImportData(do *definitions.Do) error {
 		if err := util.DockerClient.UploadToContainer(service.ID, opts); err != nil {
 			return err
 		}
-
-		doChown := definitions.NowDo()
-		doChown.Operations.DataContainerName = containerName
-		doChown.Operations.ContainerType = "data"
-		//required b/c `docker cp` (UploadToContainer) goes in as root
-		doChown.Operations.Args = []string{"chown", "--recursive", "eris", do.Destination}
-		_, err = perform.DockerRunData(doChown.Operations, nil)
-		if err != nil {
-			return fmt.Errorf("Error changing owner: %v\n", err)
+		if err := runData(containerName, []string{"chown", "--recursive", "eris", do.Destination}); err != nil {
+			return err
 		}
+
 	} else {
-		log.WithField("name", do.Name).Info("Data container does not exist.")
+		log.WithField("name", do.Name).Info("Data container does not exist, creating it.")
 		ops := loaders.LoadDataDefinition(do.Name)
+		do.MakeDestination = true
 		if err := perform.DockerCreateData(ops); err != nil {
 			return fmt.Errorf("Error creating data container %v.", err)
 		}
 		return ImportData(do)
 	}
 	do.Result = "success"
+	return nil
+}
+
+func runData(name string, args []string) error {
+	doRun := definitions.NowDo()
+	doRun.Operations.DataContainerName = name
+	doRun.Operations.ContainerType = "data"
+	//required b/c `docker cp` (UploadToContainer) goes in as root
+	doRun.Operations.Args = args
+	_, err := perform.DockerRunData(doRun.Operations, nil)
+	if err != nil {
+		return fmt.Errorf("Error running args: %v\n%v\n", args, err)
+	}
 	return nil
 }
 
