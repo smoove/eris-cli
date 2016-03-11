@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -57,12 +58,14 @@ func version() string {
 
 }
 
+// TODO break this up!!!
 func DownloadLatestBinaryRelease() (string, error) {
 	latestURL := "https://github.com/eris-ltd/eris-cli/releases/latest"
 	resp, err := http.Get(latestURL)
 	if err != nil {
-		log.Printf("could not retrieve latest eris release at %s", latestURL)
+		return "", fmt.Errorf("could not retrieve latest eris release at %s\nerror: %v\n", latestURL, err)
 	}
+
 	latestURL = resp.Request.URL.String()
 	lastPos := strings.LastIndex(latestURL, "/")
 	version := latestURL[lastPos+1:]
@@ -71,6 +74,7 @@ func DownloadLatestBinaryRelease() (string, error) {
 	hostURL := "https://github.com/eris-ltd/eris-cli/releases/download/" + version + "/"
 	filename := "eris_" + version[1:] + "_" + platform + "_" + arch
 	fileURL := hostURL + filename
+
 	switch platform {
 	case "linux":
 		filename += ".tar.gz"
@@ -102,31 +106,33 @@ func DownloadLatestBinaryRelease() (string, error) {
 		}
 	}
 	defer output.Close()
+
 	fileResponse, err := http.Get(fileURL)
 	if err != nil {
-		log.Println("Error while downloading", filename, "-", err)
-		return "", err
+		return "", fmt.Errorf("error getting file: %v\n", err)
 	}
 	defer fileResponse.Body.Close()
-	io.Copy(output, fileResponse.Body)
+
+	_, err = io.Copy(output, fileResponse.Body)
 	if err != nil {
-		log.Println("Error saving downloaded file", filename, "-", err)
-		return "", err
+		return "", fmt.Errorf("error saving file: %v\n", err)
 	}
 	erisLoc, _ := exec.LookPath("eris")
+
+	// this is hacky !!!
 	if erisBin != "" {
 		log.Println("downloaded eris binary", version, "for", platform, "to", erisBin, "\n Please manually move to", erisLoc)
 	} else {
 		log.Println("downloaded eris binary", version, "for", platform, "to", erisLoc)
 	}
+
 	var unzip string = "tar -xvf"
 	if platform != "linux" {
 		unzip = "unzip"
 	}
 	cmd := exec.Command("bin/sh", "-c", unzip, filename)
-	err = cmd.Run()
-	if err != nil {
-		log.Println("unzipping", filename, "failed:", err)
+	if err := cmd.Run(); err != nil {
+		return filename, fmt.Errorf("unzipping failed: %v\n", err)
 	}
 	return filename, nil
 }

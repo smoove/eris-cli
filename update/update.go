@@ -2,9 +2,9 @@ package update
 
 import (
 	"fmt"
-	//"os"
+	"os"
 	"os/exec"
-	//"path/filepath"
+	"path/filepath"
 	"strings"
 
 	"github.com/eris-ltd/eris-cli/definitions"
