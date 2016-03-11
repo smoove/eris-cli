@@ -2,6 +2,10 @@ package update
 
 import (
 	"fmt"
+	//"os"
+	"os/exec"
+	//"path/filepath"
+	"strings"
 
 	"github.com/eris-ltd/eris-cli/definitions"
 	"github.com/eris-ltd/eris-cli/util"
@@ -44,5 +48,25 @@ func UpdateEris(do *definitions.Do) error {
 }
 
 func GoOrBinary() (string, string, error) {
-	return "", "", nil
+	which, err := exec.Command("which", "eris").CombinedOutput()
+	if err != nil {
+		return "", "", err
+	}
+	// out is a path
+	toCheck := strings.Split(string(which), "/")
+	length := len(toCheck)
+	bin := toCheck[length-2]
+	eris := util.TrimString(toCheck[length-1]) //sometimes ya just gotta trim
+
+	if bin == "bin" && eris == "eris" {
+		if filepath.Join(os.Getenv("GOPATH"), "bin", "eris") == string(which) {
+			return "go", string(which), nil
+		} else { //binary check
+			//TODO
+			return "binary", string(which), nil
+		}
+	} else {
+		return "", "", fmt.Errorf("could not determine how eris is isntalled")
+	}
+	return "", "", err
 }
