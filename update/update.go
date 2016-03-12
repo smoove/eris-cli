@@ -63,6 +63,7 @@ func GoOrBinary() (string, string, error) {
 			return "go", string(which), nil
 		} else { //binary check
 			//TODO
+			// "usr/bin/eris"
 			return "binary", string(which), nil
 		}
 	} else {

@@ -126,6 +126,7 @@ func DownloadLatestBinaryRelease() (string, error) {
 		log.Println("downloaded eris binary", version, "for", platform, "to", erisLoc)
 	}
 
+	// TODO fix this part!
 	var unzip string = "tar -xvf"
 	if platform != "linux" {
 		unzip = "unzip"
@@ -134,5 +135,6 @@ func DownloadLatestBinaryRelease() (string, error) {
 	if err := cmd.Run(); err != nil {
 		return filename, fmt.Errorf("unzipping failed: %v\n", err)
 	}
+	// end fix needed
 	return filename, nil
 }
