@@ -16,22 +16,23 @@ import (
 
 func UpdateEris(do *definitions.Do) error {
 
-	whichEris, pathEris, err := GoOrBinary()
+	whichEris, err := GoOrBinary()
 	if err != nil {
 		return err
 	}
 	// TODO check flags!
 
 	if whichEris == "go" {
+		fmt.Println("YOOO")
 		hasGit, hasGo := util.CheckGitAndGo(true, true)
 		if !hasGit || !hasGo {
 			return fmt.Errorf("either git or go is not installed. both are required for non-binary update")
 		}
-		if err := util.UpdateErisGo(pathEris, do); err != nil {
+		if err := util.UpdateErisGo(do); err != nil {
 			return err
 		}
 	} else if whichEris == "binary" {
-		if err := util.UpdateErisBinary(pathEris); err != nil {
+		if err := util.UpdateErisBinary(); err != nil {
 			return err
 		}
 	} else {
@@ -47,27 +48,32 @@ func UpdateEris(do *definitions.Do) error {
 	return nil
 }
 
-func GoOrBinary() (string, string, error) {
+func GoOrBinary() (string, error) {
 	which, err := exec.Command("which", "eris").CombinedOutput()
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 	// out is a path
 	toCheck := strings.Split(string(which), "/")
 	length := len(toCheck)
-	bin := toCheck[length-2]
+	usr := toCheck[length-3]
+	bin := util.TrimString(toCheck[length-2])
 	eris := util.TrimString(toCheck[length-1]) //sometimes ya just gotta trim
 
+	tog := filepath.Join(os.Getenv("GOPATH"), bin, eris)
+
 	if bin == "bin" && eris == "eris" {
-		if filepath.Join(os.Getenv("GOPATH"), "bin", "eris") == string(which) {
-			return "go", string(which), nil
-		} else { //binary check
-			//TODO
+		if util.TrimString(tog) == util.TrimString(string(which)) { // gotta trim those strings!
+			log.Debug("looks like eris was instaled via go")
+			return "go", nil
+		} else if usr == "usr" { //binary check
+			log.Debug("looks like eris was instaled via binary")
+			// lookPath ...?
 			// "usr/bin/eris"
-			return "binary", string(which), nil
+			return "binary", nil
 		}
 	} else {
-		return "", "", fmt.Errorf("could not determine how eris is isntalled")
+		return "", fmt.Errorf("could not determine how eris is isntalled")
 	}
-	return "", "", err
+	return "", err
 }

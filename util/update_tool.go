@@ -11,7 +11,7 @@ import (
 	"github.com/eris-ltd/eris-cli/Godeps/_workspace/src/github.com/eris-ltd/common/go/common"
 )
 
-func UpdateErisGo(path string, do *definitions.Do) error {
+func UpdateErisGo(do *definitions.Do) error {
 	// TODO handle errors!
 	// cleaner ch dir functionality
 	//change pwd to eris/cli
@@ -33,7 +33,7 @@ func UpdateErisGo(path string, do *definitions.Do) error {
 	return nil
 }
 
-func UpdateErisBinary(path string) error {
+func UpdateErisBinary() error {
 	ChangeDirectory("bin")
 	_, err := DownloadLatestBinaryRelease()
 	return err
