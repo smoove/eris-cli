@@ -59,14 +59,14 @@ func ImportData(do *definitions.Do) error {
 			doCheck := definitions.NowDo()
 			doCheck.Name = do.Name
 			doCheck.Operations.Args = []string{"ls", do.Destination}
-			buf, err := ExecData(doCheck)
+			_, err := ExecData(doCheck)
+			// if an error ls-ing, try importing again
+			// but by making the dir first
 			if err != nil {
-				return err
+				do.MakeDestination = true
+				return ImportData(do)
 			}
-			//do something with buf
-			fmt.Println(buf.String())
 			return nil
-			//find out if needed!
 		}
 
 		reader, err := util.Tar(do.Source, 0)
@@ -86,6 +86,8 @@ func ImportData(do *definitions.Do) error {
 		if err := util.DockerClient.UploadToContainer(service.ID, opts); err != nil {
 			return err
 		}
+		//required b/c `docker cp` (UploadToContainer) goes in as root
+		// and eris images have the `eris` user by default
 		if err := runData(containerName, []string{"chown", "--recursive", "eris", do.Destination}); err != nil {
 			return err
 		}
@@ -107,7 +109,6 @@ func runData(name string, args []string) error {
 	doRun := definitions.NowDo()
 	doRun.Operations.DataContainerName = name
 	doRun.Operations.ContainerType = "data"
-	//required b/c `docker cp` (UploadToContainer) goes in as root
 	doRun.Operations.Args = args
 	_, err := perform.DockerRunData(doRun.Operations, nil)
 	if err != nil {
