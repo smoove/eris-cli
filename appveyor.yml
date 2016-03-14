@@ -28,7 +28,7 @@ build_script:
 
     choco install -yr docker -version 1.10.0
 
-    choco install -yr docker-machine -version 0.4.1
+    choco install -yr docker-machine -version 0.6.0
 
     cd c:\src\github.com\eris-ltd\eris-cli\cmd\eris
 
